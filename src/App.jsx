@@ -1,14 +1,24 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { supabase } from './lib/supabase'
 import Auth from './components/Auth'
 import GroceryForm from './components/GroceryForm'
 import GroceryList from './components/GroceryList'
+import ListSwitcher from './components/ListSwitcher'
+import ManageMembers from './components/ManageMembers'
 import './App.css'
+
+const SELECTED_LIST_KEY = 'grocery.selectedListId'
 
 function App() {
   const [session, setSession] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
+  const [lists, setLists] = useState([])
+  const [listsLoaded, setListsLoaded] = useState(false)
+  const [currentListId, setCurrentListId] = useState(() => localStorage.getItem(SELECTED_LIST_KEY))
   const [items, setItems] = useState([])
+  const [itemsLoading, setItemsLoading] = useState(false)
+  const [manageOpen, setManageOpen] = useState(false)
+  const [notice, setNotice] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -21,18 +31,99 @@ function App() {
     return () => subscription.unsubscribe()
   }, [])
 
+  const loadLists = useCallback(async () => {
+    const { data, error } = await supabase
+      .from('lists')
+      .select('id, name, owner_id, is_private, created_at')
+      .order('created_at', { ascending: true })
+    if (error) {
+      console.error('Failed to load lists:', error)
+      return { lists: [], error }
+    }
+    return { lists: data ?? [], error: null }
+  }, [])
+
   useEffect(() => {
     if (!session) {
+      setLists([])
+      setListsLoaded(false)
+      setCurrentListId(null)
       setItems([])
       return
     }
     let cancelled = false
+    ;(async () => {
+      const params = new URLSearchParams(window.location.search)
+      const inviteToken = params.get('invite')
+
+      let joinedListId = null
+      if (inviteToken) {
+        const { data, error } = await supabase.rpc('join_list_with_token', { p_token: inviteToken })
+        if (error) {
+          setNotice({ type: 'error', text: 'Invite link is invalid or has been revoked.' })
+        } else {
+          joinedListId = data
+          setNotice({ type: 'success', text: 'You joined the list.' })
+        }
+        params.delete('invite')
+        const query = params.toString()
+        const url = window.location.pathname + (query ? `?${query}` : '')
+        window.history.replaceState({}, '', url)
+      }
+
+      const { lists: loaded, error: loadErr } = await loadLists()
+      let nextLists = loaded
+
+      if (!loadErr && nextLists.length === 0 && !joinedListId) {
+        const { data, error } = await supabase
+          .from('lists')
+          .insert({ name: 'My list', owner_id: session.user.id, is_private: true })
+          .select()
+          .single()
+        if (error) {
+          console.error('Failed to create default list:', error)
+          setNotice({ type: 'error', text: `Could not create default list: ${error.message}` })
+        } else if (data) {
+          nextLists = [data]
+        }
+      } else if (loadErr) {
+        setNotice({ type: 'error', text: `Could not load lists: ${loadErr.message}` })
+      }
+
+      if (cancelled) return
+      setLists(nextLists)
+      setListsLoaded(true)
+
+      const stored = localStorage.getItem(SELECTED_LIST_KEY)
+      const preferred =
+        joinedListId ??
+        (stored && nextLists.some(l => l.id === stored) ? stored : null) ??
+        nextLists[0]?.id ??
+        null
+      setCurrentListId(preferred)
+    })()
+    return () => { cancelled = true }
+  }, [session, loadLists])
+
+  useEffect(() => {
+    if (currentListId) localStorage.setItem(SELECTED_LIST_KEY, currentListId)
+  }, [currentListId])
+
+  useEffect(() => {
+    if (!session || !currentListId) {
+      setItems([])
+      return
+    }
+    let cancelled = false
+    setItemsLoading(true)
     supabase
       .from('grocery_items')
       .select('*')
+      .eq('list_id', currentListId)
       .order('position', { ascending: true })
       .then(({ data, error }) => {
         if (cancelled) return
+        setItemsLoading(false)
         if (error) {
           console.error('Failed to load items:', error)
           return
@@ -40,9 +131,10 @@ function App() {
         setItems(data ?? [])
       })
     return () => { cancelled = true }
-  }, [session])
+  }, [session, currentListId])
 
   async function addItem(title, description) {
+    if (!currentListId) return
     const position = items.length > 0
       ? Math.max(...items.map(i => i.position)) + 1
       : 0
@@ -50,6 +142,7 @@ function App() {
       .from('grocery_items')
       .insert({
         user_id: session.user.id,
+        list_id: currentListId,
         title,
         description: description || null,
         position,
@@ -111,7 +204,30 @@ function App() {
     }
   }
 
+  async function createList(name) {
+    const { data, error } = await supabase
+      .from('lists')
+      .insert({ name, owner_id: session.user.id, is_private: false })
+      .select()
+      .single()
+    if (error) {
+      console.error('Failed to create list:', error)
+      setNotice({ type: 'error', text: `Could not create list: ${error.message}` })
+      return
+    }
+    setLists(prev => [...prev, data])
+    setCurrentListId(data.id)
+  }
+
+  async function handleLeaveList() {
+    setManageOpen(false)
+    const remaining = lists.filter(l => l.id !== currentListId)
+    setLists(remaining)
+    setCurrentListId(remaining[0]?.id ?? null)
+  }
+
   async function handleSignOut() {
+    localStorage.removeItem(SELECTED_LIST_KEY)
     await supabase.auth.signOut()
   }
 
@@ -127,26 +243,76 @@ function App() {
     return <Auth />
   }
 
+  const currentList = lists.find(l => l.id === currentListId)
+
   return (
     <div className="app">
       <header className="app-header">
         <div className="header-row">
-          <h1>Grocery List</h1>
+          <div className="header-title">
+            <h1>Grocery List</h1>
+            {listsLoaded && (
+              <ListSwitcher
+                lists={lists}
+                currentListId={currentListId}
+                onSelect={setCurrentListId}
+                onCreate={createList}
+              />
+            )}
+            {currentList && !currentList.is_private && (
+              <button
+                type="button"
+                className="btn-add-members"
+                onClick={() => setManageOpen(true)}
+              >
+                Add members
+              </button>
+            )}
+          </div>
           <div className="header-user">
             <span className="user-email">{session.user.email}</span>
             <button className="btn-signout" onClick={handleSignOut}>Sign out</button>
           </div>
         </div>
       </header>
+
       <main className="app-main">
-        <GroceryForm onAdd={addItem} />
-        <GroceryList
-          items={items}
-          onToggle={togglePurchased}
-          onReorder={reorderItems}
-          onDelete={deleteItem}
-        />
+        {notice && (
+          <div className={`notice notice-${notice.type}`}>
+            <span>{notice.text}</span>
+            <button className="btn-link" onClick={() => setNotice(null)}>Dismiss</button>
+          </div>
+        )}
+
+        {!listsLoaded ? (
+          <p className="empty-state">Loading lists…</p>
+        ) : !currentList ? (
+          <p className="empty-state">You don't belong to any lists yet. Use the <strong>Grocery List ▾</strong> menu above to create one.</p>
+        ) : (
+          <>
+            <GroceryForm onAdd={addItem} />
+            {itemsLoading ? (
+              <p className="empty-state">Loading items…</p>
+            ) : (
+              <GroceryList
+                items={items}
+                onToggle={togglePurchased}
+                onReorder={reorderItems}
+                onDelete={deleteItem}
+              />
+            )}
+          </>
+        )}
       </main>
+
+      {manageOpen && currentList && (
+        <ManageMembers
+          list={currentList}
+          currentUserId={session.user.id}
+          onClose={() => setManageOpen(false)}
+          onLeave={handleLeaveList}
+        />
+      )}
     </div>
   )
 }
