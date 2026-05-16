@@ -8,6 +8,13 @@ import ManageMembers from './components/ManageMembers'
 import './App.css'
 
 const SELECTED_LIST_KEY = 'grocery.selectedListId'
+const THEME_KEY = 'grocery.theme'
+
+function initialTheme() {
+  const stored = localStorage.getItem(THEME_KEY)
+  if (stored === 'light' || stored === 'dark') return stored
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+}
 
 function App() {
   const [session, setSession] = useState(null)
@@ -19,6 +26,12 @@ function App() {
   const [itemsLoading, setItemsLoading] = useState(false)
   const [manageOpen, setManageOpen] = useState(false)
   const [notice, setNotice] = useState(null)
+  const [theme, setTheme] = useState(initialTheme)
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme)
+    localStorage.setItem(THEME_KEY, theme)
+  }, [theme])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -270,6 +283,14 @@ function App() {
             )}
           </div>
           <div className="header-user">
+            <button
+              className="btn-theme"
+              onClick={() => setTheme(t => (t === 'dark' ? 'light' : 'dark'))}
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              {theme === 'dark' ? '☀' : '☾'}
+            </button>
             <span className="user-email">{session.user.email}</span>
             <button className="btn-signout" onClick={handleSignOut}>Sign out</button>
           </div>
