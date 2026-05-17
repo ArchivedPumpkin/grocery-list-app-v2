@@ -5,6 +5,7 @@ import GroceryForm from './components/GroceryForm'
 import GroceryList from './components/GroceryList'
 import ListSwitcher from './components/ListSwitcher'
 import ManageMembers from './components/ManageMembers'
+import Account from './components/Account'
 import './App.css'
 
 const SELECTED_LIST_KEY = 'grocery.selectedListId'
@@ -27,6 +28,8 @@ function App() {
   const [manageOpen, setManageOpen] = useState(false)
   const [notice, setNotice] = useState(null)
   const [theme, setTheme] = useState(initialTheme)
+  const [profile, setProfile] = useState(null)
+  const [view, setView] = useState('list')
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme)
@@ -43,6 +46,25 @@ function App() {
     })
     return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!session) return
+    let cancelled = false
+    supabase
+      .from('profiles')
+      .select('id, username, discriminator')
+      .eq('id', session.user.id)
+      .single()
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          console.error('Failed to load profile:', error)
+          return
+        }
+        setProfile(data)
+      })
+    return () => { cancelled = true }
+  }, [session])
 
   const loadLists = useCallback(async () => {
     const { data, error } = await supabase
@@ -62,6 +84,8 @@ function App() {
       setListsLoaded(false)
       setCurrentListId(null)
       setItems([])
+      setProfile(null)
+      setView('list')
       return
     }
     let cancelled = false
@@ -264,7 +288,7 @@ function App() {
         <div className="header-row">
           <div className="header-title">
             <h1>Grocery List</h1>
-            {listsLoaded && (
+            {view === 'list' && listsLoaded && (
               <ListSwitcher
                 lists={lists}
                 currentListId={currentListId}
@@ -272,7 +296,7 @@ function App() {
                 onCreate={createList}
               />
             )}
-            {currentList && !currentList.is_private && (
+            {view === 'list' && currentList && !currentList.is_private && (
               <button
                 type="button"
                 className="btn-add-members"
@@ -291,7 +315,14 @@ function App() {
             >
               {theme === 'dark' ? '☀' : '☾'}
             </button>
-            <span className="user-email">{session.user.email}</span>
+            <button
+              type="button"
+              className="user-handle"
+              onClick={() => setView('account')}
+              title="Account settings"
+            >
+              {profile ? `${profile.username}#${profile.discriminator}` : session.user.email}
+            </button>
             <button className="btn-signout" onClick={handleSignOut}>Sign out</button>
           </div>
         </div>
@@ -305,7 +336,14 @@ function App() {
           </div>
         )}
 
-        {!listsLoaded ? (
+        {view === 'account' ? (
+          <Account
+            session={session}
+            profile={profile}
+            onProfileChange={setProfile}
+            onBack={() => setView('list')}
+          />
+        ) : !listsLoaded ? (
           <p className="empty-state">Loading lists…</p>
         ) : !currentList ? (
           <p className="empty-state">You don't belong to any lists yet. Use the <strong>Grocery List ▾</strong> menu above to create one.</p>
