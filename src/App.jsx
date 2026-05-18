@@ -6,6 +6,7 @@ import GroceryList from './components/GroceryList'
 import ListSwitcher from './components/ListSwitcher'
 import ManageMembers from './components/ManageMembers'
 import Account from './components/Account'
+import UserMenu from './components/UserMenu'
 import './App.css'
 
 const SELECTED_LIST_KEY = 'grocery.selectedListId'
@@ -315,15 +316,11 @@ function App() {
             >
               {theme === 'dark' ? '☀' : '☾'}
             </button>
-            <button
-              type="button"
-              className="user-handle"
-              onClick={() => setView('account')}
-              title="Account settings"
-            >
-              {profile ? `${profile.username}#${profile.discriminator}` : session.user.email}
-            </button>
-            <button className="btn-signout" onClick={handleSignOut}>Sign out</button>
+            <UserMenu
+              label={profile ? `${profile.username}#${profile.discriminator}` : session.user.email}
+              onAccount={() => setView('account')}
+              onSignOut={handleSignOut}
+            />
           </div>
         </div>
       </header>
