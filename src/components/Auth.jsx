@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-function Auth() {
+function Auth({ onBack }) {
   const [mode, setMode] = useState('signin')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -38,10 +38,19 @@ function Auth() {
         <h1>Grocery List</h1>
       </header>
       <main className="app-main">
+        {onBack && (
+          <button type="button" className="btn-link" onClick={onBack}>
+            ← Continue as guest
+          </button>
+        )}
         <form className="auth-form" onSubmit={handleSubmit}>
           <h2 className="auth-heading">
             {mode === 'signin' ? 'Sign in' : 'Create account'}
           </h2>
+          <p className="auth-subtle">
+            Sign in to sync your lists across devices and share them with others. Any lists
+            you've created as a guest can be merged into your account.
+          </p>
           <div className="form-group">
             <label htmlFor="auth-email">Email</label>
             <input
