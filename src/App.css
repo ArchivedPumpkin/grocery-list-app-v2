@@ -2,15 +2,24 @@
 .app {
   text-align: left;
   padding: 40px 48px;
+  padding-top: max(40px, env(safe-area-inset-top));
+  padding-bottom: max(40px, env(safe-area-inset-bottom));
+  padding-left: max(48px, env(safe-area-inset-left));
+  padding-right: max(48px, env(safe-area-inset-right));
   display: flex;
   flex-direction: column;
   gap: 32px;
   min-height: 100svh;
+  min-height: 100dvh;
   box-sizing: border-box;
 
   @media (max-width: 1024px) {
     padding: 24px 20px;
-    gap: 24px;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    gap: 20px;
   }
 }
 
@@ -970,4 +979,225 @@
 
 .modal-actions .btn-add {
   align-self: auto;
+}
+
+/* ── Mobile (≤640px) ─────────────────────────────────── */
+@media (max-width: 640px) {
+  /* Prevent iOS auto-zoom on input focus (needs ≥16px) */
+  .form-group input,
+  .list-switcher-create input,
+  .add-member-form input,
+  .invite-link,
+  .auth-form input {
+    font-size: 16px;
+    padding: 11px 14px;
+  }
+
+  /* Header stacks vertically; user controls drop below title */
+  .header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  .header-title {
+    gap: 10px;
+    align-items: center;
+  }
+  .app-header h1 {
+    font-size: 24px;
+  }
+  .header-user {
+    justify-content: space-between;
+  }
+
+  /* List switcher takes available width on mobile */
+  .list-switcher {
+    flex: 1;
+    min-width: 0;
+  }
+  .list-switcher-trigger {
+    width: 100%;
+    justify-content: space-between;
+    padding: 10px 14px;
+    min-height: 44px;
+    font-size: 15px;
+  }
+  .list-switcher-name {
+    max-width: none;
+    flex: 1;
+    text-align: left;
+  }
+  .list-switcher-menu {
+    left: 0;
+    right: 0;
+    min-width: 0;
+  }
+  .list-switcher-item,
+  .list-switcher-action {
+    padding: 12px 12px;
+    font-size: 15px;
+    min-height: 44px;
+  }
+  .list-switcher-items {
+    max-height: 50vh;
+  }
+
+  /* User menu / theme / signin: ≥44px tap targets */
+  .btn-theme {
+    width: 44px;
+    height: 44px;
+    font-size: 18px;
+  }
+  .btn-signin,
+  .user-handle {
+    min-height: 44px;
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+  .user-menu-panel {
+    min-width: 200px;
+  }
+  .btn-add-members {
+    min-height: 40px;
+    padding: 9px 14px;
+  }
+
+  /* Form: full-width primary button, comfier padding */
+  .grocery-form {
+    padding: 16px;
+    gap: 10px;
+  }
+  .btn-add {
+    align-self: stretch;
+    width: 100%;
+    min-height: 48px;
+    padding: 12px 20px;
+    font-size: 16px;
+  }
+
+  /* Grocery items: bigger tap targets */
+  .grocery-item {
+    padding: 12px;
+    gap: 10px;
+  }
+  .drag-handle {
+    width: 36px;
+    height: 44px;
+    font-size: 20px;
+    opacity: 0.6;
+    /* Larger hit area for touch */
+    margin: -4px 0;
+  }
+  .btn-check {
+    width: 28px;
+    height: 28px;
+  }
+  .btn-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  .item-title {
+    font-size: 16px;
+  }
+  .item-description {
+    font-size: 13px;
+  }
+
+  /* Modal: bottom-sheet on mobile */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    border-radius: 16px 16px 0 0;
+    max-height: 92dvh;
+    padding: 20px 16px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    gap: 18px;
+  }
+  .modal-narrow {
+    max-width: 100%;
+  }
+  .modal-header h2 {
+    font-size: 17px;
+  }
+
+  /* Add-member form stacks for breathing room */
+  .add-member-form {
+    flex-direction: column;
+  }
+  .add-member-form .btn-add {
+    align-self: stretch;
+    width: 100%;
+  }
+
+  /* Invite row wraps neatly */
+  .invite-row {
+    flex-wrap: wrap;
+  }
+  .invite-link {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+
+  /* Notice & guest banner */
+  .notice,
+  .guest-banner {
+    font-size: 13px;
+    padding: 10px 12px;
+    align-items: flex-start;
+  }
+
+  /* Account page */
+  .account-section {
+    padding: 16px;
+  }
+  .account-title {
+    font-size: 20px;
+  }
+  .handle-value {
+    font-size: 20px;
+    word-break: break-all;
+  }
+
+  /* Auth form */
+  .auth-form {
+    padding: 20px 16px;
+  }
+
+  /* Tap feedback (no hover on touch) */
+  .btn-add:active,
+  .btn-signin:active,
+  .btn-secondary:active,
+  .btn-icon:active,
+  .btn-theme:active,
+  .btn-check:active,
+  .list-switcher-trigger:active,
+  .list-switcher-item:active,
+  .list-switcher-action:active,
+  .user-handle:active,
+  .btn-add-members:active {
+    transform: scale(0.97);
+    transition: transform 0.05s;
+  }
+}
+
+/* Larger drag handle hit area on any coarse pointer (touch) */
+@media (pointer: coarse) {
+  .drag-handle {
+    min-width: 36px;
+    min-height: 44px;
+    opacity: 0.6;
+  }
+  .btn-icon {
+    min-width: 40px;
+    min-height: 40px;
+  }
+  .btn-check {
+    min-width: 28px;
+    min-height: 28px;
+  }
 }
