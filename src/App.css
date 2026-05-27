@@ -993,21 +993,26 @@
     padding: 11px 14px;
   }
 
-  /* Header stacks vertically; user controls drop below title */
+  /* Header stacks vertically; user controls move to the top, list dropdown sits below the title */
   .header-row {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
   .header-title {
+    flex-direction: column;
+    align-items: stretch;
     gap: 10px;
-    align-items: center;
   }
   .app-header h1 {
     font-size: 24px;
   }
   .header-user {
+    order: -1;
     justify-content: space-between;
+  }
+  .btn-add-members {
+    align-self: flex-start;
   }
 
   /* List switcher takes available width on mobile */
