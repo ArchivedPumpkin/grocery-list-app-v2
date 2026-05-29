@@ -473,7 +473,7 @@
 /* ── Header title + list switcher ────────────────────── */
 .header-title {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 16px;
   flex-wrap: wrap;
 }

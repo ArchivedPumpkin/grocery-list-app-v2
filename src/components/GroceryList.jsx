@@ -1,8 +1,7 @@
 import {
   DndContext,
   closestCenter,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -17,11 +16,8 @@ import GroceryItem from './GroceryItem'
 
 function GroceryList({ items, onToggle, onReorder, onDelete }) {
   const sensors = useSensors(
-    useSensor(MouseSensor, {
-      activationConstraint: { distance: 4 },
-    }),
-    useSensor(TouchSensor, {
-      activationConstraint: { delay: 180, tolerance: 8 },
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 5 },
     }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
