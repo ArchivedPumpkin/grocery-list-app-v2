@@ -2,7 +2,7 @@ const KEY = 'grocery.guest'
 const DEFAULT_LIST_NAME = 'My list'
 
 function emptyState() {
-  return { lists: [], items: {} }
+  return { lists: [], items: {}, sections: {} }
 }
 
 function read() {
@@ -13,6 +13,7 @@ function read() {
     return {
       lists: Array.isArray(parsed.lists) ? parsed.lists : [],
       items: parsed.items && typeof parsed.items === 'object' ? parsed.items : {},
+      sections: parsed.sections && typeof parsed.sections === 'object' ? parsed.sections : {},
     }
   } catch {
     return emptyState()
@@ -67,11 +68,44 @@ export function createGuestList(name) {
   const list = makeList(name)
   state.lists.push(list)
   state.items[list.id] = []
+  state.sections[list.id] = []
   write(state)
   return list
 }
 
-export function addGuestItem(listId, { title, description }) {
+export function loadGuestSections(listId) {
+  const state = read()
+  return state.sections[listId] ?? []
+}
+
+export function addGuestSection(listId, name) {
+  const state = read()
+  const existing = state.sections[listId] ?? []
+  const position = existing.length > 0 ? Math.max(...existing.map(s => s.position)) + 1 : 0
+  const section = {
+    id: uuid(),
+    list_id: listId,
+    name,
+    position,
+    created_at: nowIso(),
+  }
+  state.sections[listId] = [...existing, section]
+  write(state)
+  return section
+}
+
+export function deleteGuestSection(listId, id) {
+  const state = read()
+  const sections = state.sections[listId] ?? []
+  state.sections[listId] = sections.filter(s => s.id !== id)
+  const items = state.items[listId] ?? []
+  state.items[listId] = items.map(it =>
+    it.section_id === id ? { ...it, section_id: null } : it
+  )
+  write(state)
+}
+
+export function addGuestItem(listId, { title, description, section_id = null }) {
   const state = read()
   const existing = state.items[listId] ?? []
   const position = existing.length > 0 ? Math.max(...existing.map(i => i.position)) + 1 : 0
@@ -80,6 +114,7 @@ export function addGuestItem(listId, { title, description }) {
     list_id: listId,
     title,
     description: description || null,
+    section_id: section_id || null,
     purchased: false,
     position,
     created_at: nowIso(),

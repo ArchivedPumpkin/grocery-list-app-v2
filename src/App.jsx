@@ -11,6 +11,9 @@ import {
   readAllGuestItems,
   clearGuestData,
   hasGuestItems,
+  loadGuestSections,
+  addGuestSection,
+  deleteGuestSection,
 } from './lib/guestStore'
 import Auth from './components/Auth'
 import GroceryForm from './components/GroceryForm'
@@ -39,6 +42,7 @@ function App() {
   const [currentListId, setCurrentListId] = useState(() => localStorage.getItem(SELECTED_LIST_KEY))
   const [items, setItems] = useState([])
   const [itemsLoading, setItemsLoading] = useState(false)
+  const [sections, setSections] = useState([])
   const [manageOpen, setManageOpen] = useState(false)
   const [notice, setNotice] = useState(null)
   const [theme, setTheme] = useState(initialTheme)
@@ -205,10 +209,47 @@ function App() {
     return () => { cancelled = true }
   }, [isGuest, currentListId])
 
-  async function addItem(title, description) {
-    if (!currentListId) return
+  useEffect(() => {
+    if (!currentListId) {
+      setSections([])
+      return
+    }
     if (isGuest) {
-      const item = addGuestItem(currentListId, { title, description })
+      setSections(loadGuestSections(currentListId))
+      return
+    }
+    let cancelled = false
+    supabase
+      .from('sections')
+      .select('*')
+      .eq('list_id', currentListId)
+      .order('position', { ascending: true })
+      .then(({ data, error }) => {
+        if (cancelled) return
+        if (error) {
+          console.error('Failed to load sections:', error)
+          return
+        }
+        setSections(data ?? [])
+      })
+    return () => { cancelled = true }
+  }, [isGuest, currentListId])
+
+  // Resolve a section name to an id, reusing a matching section or creating one.
+  async function resolveSectionId(name) {
+    const trimmed = name.trim()
+    if (!trimmed) return null
+    const existing = sections.find(s => s.name.trim().toLowerCase() === trimmed.toLowerCase())
+    if (existing) return existing.id
+    const created = await createSection(trimmed)
+    return created?.id ?? null
+  }
+
+  async function addItem(title, description, sectionName = null) {
+    if (!currentListId) return
+    const sectionId = sectionName ? await resolveSectionId(sectionName) : null
+    if (isGuest) {
+      const item = addGuestItem(currentListId, { title, description, section_id: sectionId })
       setItems(prev => [...prev, item])
       return
     }
@@ -222,6 +263,7 @@ function App() {
         list_id: currentListId,
         title,
         description: description || null,
+        section_id: sectionId || null,
         position,
       })
       .select()
@@ -231,6 +273,50 @@ function App() {
       return
     }
     setItems(prev => [...prev, data])
+  }
+
+  async function createSection(name) {
+    if (!currentListId) return null
+    if (isGuest) {
+      const section = addGuestSection(currentListId, name)
+      setSections(prev => [...prev, section])
+      return section
+    }
+    const position = sections.length > 0
+      ? Math.max(...sections.map(s => s.position)) + 1
+      : 0
+    const { data, error } = await supabase
+      .from('sections')
+      .insert({ list_id: currentListId, name, position })
+      .select()
+      .single()
+    if (error) {
+      console.error('Failed to create section:', error)
+      setNotice({ type: 'error', text: `Could not create section: ${error.message}` })
+      return null
+    }
+    setSections(prev => [...prev, data])
+    return data
+  }
+
+  async function deleteSection(id) {
+    const previousSections = sections
+    const previousItems = items
+    setSections(prev => prev.filter(s => s.id !== id))
+    setItems(prev => prev.map(it => (it.section_id === id ? { ...it, section_id: null } : it)))
+    if (isGuest) {
+      deleteGuestSection(currentListId, id)
+      return
+    }
+    const { error } = await supabase
+      .from('sections')
+      .delete()
+      .eq('id', id)
+    if (error) {
+      console.error('Failed to delete section:', error)
+      setSections(previousSections)
+      setItems(previousItems)
+    }
   }
 
   async function togglePurchased(id) {
@@ -543,15 +629,20 @@ function App() {
           <p className="empty-state">You don't belong to any lists yet. Use the <strong>Grocery List ▾</strong> menu above to create one.</p>
         ) : (
           <>
-            <GroceryForm onAdd={addItem} />
+            <GroceryForm
+              onAdd={addItem}
+              sections={sections}
+            />
             {itemsLoading ? (
               <p className="empty-state">Loading items…</p>
             ) : (
               <GroceryList
                 items={items}
+                sections={sections}
                 onToggle={togglePurchased}
                 onReorder={reorderItems}
                 onDelete={deleteItem}
+                onDeleteSection={deleteSection}
               />
             )}
           </>

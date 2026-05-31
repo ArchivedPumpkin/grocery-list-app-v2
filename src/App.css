@@ -283,6 +283,51 @@
   }
 }
 
+.section-select {
+  padding: 9px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text-h);
+  font-size: 15px;
+  font-family: var(--sans);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-bg);
+  }
+}
+
+.section-create-row {
+  display: flex;
+  gap: 8px;
+
+  input {
+    flex: 1;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    color: var(--text-h);
+    font-size: 15px;
+    font-family: var(--sans);
+    outline: none;
+
+    &:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-bg);
+    }
+  }
+
+  .btn-add,
+  .btn-secondary {
+    align-self: auto;
+  }
+}
+
 /* ── List wrapper ────────────────────────────────────── */
 .grocery-list-wrapper {
   display: flex;
@@ -306,7 +351,8 @@
   font-size: 16px;
 }
 
-.purchased-section {
+.purchased-section,
+.grocery-section {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -319,6 +365,24 @@
   text-transform: uppercase;
   color: var(--text);
   margin: 0;
+}
+
+.grocery-section .section-heading-row {
+  justify-content: space-between;
+}
+
+.btn-delete-section {
+  width: 24px;
+  height: 24px;
+  opacity: 0.5;
+  transition: opacity 0.15s, background 0.15s, color 0.15s, border-color 0.15s;
+
+  &:hover {
+    opacity: 1;
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.35);
+  }
 }
 
 .drag-handle {
@@ -985,12 +1049,18 @@
 @media (max-width: 640px) {
   /* Prevent iOS auto-zoom on input focus (needs ≥16px) */
   .form-group input,
+  .section-select,
+  .section-create-row input,
   .list-switcher-create input,
   .add-member-form input,
   .invite-link,
   .auth-form input {
     font-size: 16px;
     padding: 11px 14px;
+  }
+
+  .section-create-row {
+    flex-wrap: wrap;
   }
 
   /* Header: title + user controls share the top row; list dropdown drops below */
