@@ -94,6 +94,12 @@ export function addGuestSection(listId, name) {
   return section
 }
 
+export function reorderGuestSections(listId, sections) {
+  const state = read()
+  state.sections[listId] = sections.map((s, idx) => ({ ...s, position: idx }))
+  write(state)
+}
+
 export function deleteGuestSection(listId, id) {
   const state = read()
   const sections = state.sections[listId] ?? []

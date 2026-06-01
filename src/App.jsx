@@ -14,6 +14,7 @@ import {
   loadGuestSections,
   addGuestSection,
   deleteGuestSection,
+  reorderGuestSections,
 } from './lib/guestStore'
 import Auth from './components/Auth'
 import GroceryForm from './components/GroceryForm'
@@ -316,6 +317,26 @@ function App() {
       console.error('Failed to delete section:', error)
       setSections(previousSections)
       setItems(previousItems)
+    }
+  }
+
+  async function reorderSections(newSections) {
+    const previous = sections
+    const repositioned = newSections.map((s, index) => ({ ...s, position: index }))
+    setSections(repositioned)
+    if (isGuest) {
+      reorderGuestSections(currentListId, repositioned)
+      return
+    }
+    const results = await Promise.all(
+      repositioned.map(s =>
+        supabase.from('sections').update({ position: s.position }).eq('id', s.id)
+      )
+    )
+    const failure = results.find(r => r.error)
+    if (failure) {
+      console.error('Failed to reorder sections:', failure.error)
+      setSections(previous)
     }
   }
 
@@ -632,6 +653,7 @@ function App() {
             <GroceryForm
               onAdd={addItem}
               sections={sections}
+              onDeleteSection={deleteSection}
             />
             {itemsLoading ? (
               <p className="empty-state">Loading items…</p>
@@ -641,6 +663,7 @@ function App() {
                 sections={sections}
                 onToggle={togglePurchased}
                 onReorder={reorderItems}
+                onReorderSections={reorderSections}
                 onDelete={deleteItem}
                 onDeleteSection={deleteSection}
               />

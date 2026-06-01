@@ -1,6 +1,5 @@
 // Common grocery sections offered as built-in options in the section dropdown.
 export const PREDEFINED_SECTIONS = [
-  'Produce',
   'Dairy & Eggs',
   'Meat & Seafood',
   'Bakery',
@@ -30,5 +29,11 @@ export function addCustomSectionName(name) {
   const names = loadCustomSectionNames()
   if (names.some(n => n.toLowerCase() === trimmed.toLowerCase())) return
   names.push(trimmed)
+  localStorage.setItem(CUSTOM_KEY, JSON.stringify(names))
+}
+
+export function removeCustomSectionName(name) {
+  const lower = name.trim().toLowerCase()
+  const names = loadCustomSectionNames().filter(n => n.toLowerCase() !== lower)
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(names))
 }
