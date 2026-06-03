@@ -9,17 +9,21 @@ import {
 function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSection }) {
   const [open, setOpen] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState(false)
   const [newName, setNewName] = useState('')
   const [customNames, setCustomNames] = useState(() => loadCustomSectionNames())
   const rootRef = useRef(null)
 
+  function closeMenu() {
+    setOpen(false)
+    setCreating(false)
+    setEditing(false)
+    setNewName('')
+  }
+
   useEffect(() => {
     function onDocClick(e) {
-      if (!rootRef.current?.contains(e.target)) {
-        setOpen(false)
-        setCreating(false)
-        setNewName('')
-      }
+      if (!rootRef.current?.contains(e.target)) closeMenu()
     }
     if (open) document.addEventListener('mousedown', onDocClick)
     return () => document.removeEventListener('mousedown', onDocClick)
@@ -43,13 +47,13 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
   }, [customNames, sections])
 
   // Built-in predefined names aren't removable; custom names and real sections are.
-  function isDeletable(name) {
-    const lower = name.trim().toLowerCase()
-    return (
-      sections.some(s => s.name.trim().toLowerCase() === lower) ||
-      customNames.some(n => n.toLowerCase() === lower)
-    )
-  }
+  const deletableNames = useMemo(() => {
+    const lowerSet = new Set([
+      ...sections.map(s => s.name.trim().toLowerCase()),
+      ...customNames.map(n => n.toLowerCase()),
+    ])
+    return optionNames.filter(name => lowerSet.has(name.trim().toLowerCase()))
+  }, [optionNames, sections, customNames])
 
   function handleSelect(name) {
     onChange(name)
@@ -65,6 +69,8 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
       setCustomNames(prev => prev.filter(n => n.toLowerCase() !== lower))
     }
     if (value.trim().toLowerCase() === lower) onChange('')
+    // Leave edit mode once the last removable section is gone.
+    if (deletableNames.length <= 1) setEditing(false)
   }
 
   function handleCreate(e) {
@@ -98,64 +104,99 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
 
       {open && (
         <div className="section-picker-menu" role="menu">
-          <ul className="section-picker-items">
-            <li className="section-picker-row">
+          {editing ? (
+            <>
+              <div className="section-picker-manage-head">Remove sections</div>
+              <ul className="section-picker-items">
+                {deletableNames.map(name => (
+                  <li key={name} className="section-picker-row">
+                    <button
+                      type="button"
+                      className="section-picker-delete-row"
+                      onClick={() => handleDelete(name)}
+                      aria-label={`Delete section ${name}`}
+                      title={`Delete “${name}”`}
+                    >
+                      <span className="section-picker-delete-icon" aria-hidden="true">🗑</span>
+                      <span className="section-picker-delete-name">{name}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="section-picker-divider" />
+
               <button
                 type="button"
-                className={`section-picker-item${!value ? ' active' : ''}`}
-                onClick={() => handleSelect('')}
+                className="section-picker-action"
+                onClick={() => setEditing(false)}
                 role="menuitem"
               >
-                No section
+                ✓ Done
               </button>
-            </li>
-            {optionNames.map(name => (
-              <li key={name} className="section-picker-row">
-                <button
-                  type="button"
-                  className={`section-picker-item${value.trim().toLowerCase() === name.toLowerCase() ? ' active' : ''}`}
-                  onClick={() => handleSelect(name)}
-                  role="menuitem"
-                >
-                  {name}
-                </button>
-                {isDeletable(name) && (
+            </>
+          ) : (
+            <>
+              <ul className="section-picker-items">
+                <li className="section-picker-row">
                   <button
                     type="button"
-                    className="btn-icon btn-delete-section section-picker-delete"
-                    onClick={() => handleDelete(name)}
-                    aria-label={`Delete section ${name}`}
-                    title="Delete section"
+                    className={`section-picker-item${!value ? ' active' : ''}`}
+                    onClick={() => handleSelect('')}
+                    role="menuitem"
                   >
-                    ✕
+                    No section
                   </button>
-                )}
-              </li>
-            ))}
-          </ul>
+                </li>
+                {optionNames.map(name => (
+                  <li key={name} className="section-picker-row">
+                    <button
+                      type="button"
+                      className={`section-picker-item${value.trim().toLowerCase() === name.toLowerCase() ? ' active' : ''}`}
+                      onClick={() => handleSelect(name)}
+                      role="menuitem"
+                    >
+                      {name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
 
-          <div className="section-picker-divider" />
+              <div className="section-picker-divider" />
 
-          {creating ? (
-            <form className="section-picker-create" onSubmit={handleCreate}>
-              <input
-                type="text"
-                value={newName}
-                onChange={e => setNewName(e.target.value)}
-                placeholder="Section name"
-                autoFocus
-              />
-              <button type="submit" className="btn-add">Add</button>
-            </form>
-          ) : (
-            <button
-              type="button"
-              className="section-picker-action"
-              onClick={() => setCreating(true)}
-              role="menuitem"
-            >
-              + Write your own
-            </button>
+              {creating ? (
+                <form className="section-picker-create" onSubmit={handleCreate}>
+                  <input
+                    type="text"
+                    value={newName}
+                    onChange={e => setNewName(e.target.value)}
+                    placeholder="Section name"
+                    autoFocus
+                  />
+                  <button type="submit" className="btn-add">Add</button>
+                </form>
+              ) : (
+                <button
+                  type="button"
+                  className="section-picker-action"
+                  onClick={() => setCreating(true)}
+                  role="menuitem"
+                >
+                  + Write your own
+                </button>
+              )}
+
+              {deletableNames.length > 0 && (
+                <button
+                  type="button"
+                  className="section-picker-action section-picker-manage"
+                  onClick={() => setEditing(true)}
+                  role="menuitem"
+                >
+                  ✎ Manage sections
+                </button>
+              )}
+            </>
           )}
         </div>
       )}

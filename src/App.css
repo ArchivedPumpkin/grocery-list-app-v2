@@ -390,10 +390,54 @@
   font-weight: 600;
 }
 
-.section-picker-delete {
+.section-picker-manage-head {
+  padding: 6px 10px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+
+.section-picker-manage {
+  color: var(--text);
+}
+
+.section-picker-delete-row {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+  padding: 8px 10px;
+  background: transparent;
+  color: var(--text-h);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: var(--sans);
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+
+  &:hover,
+  &:focus-visible {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444;
+    outline: none;
+  }
+}
+
+.section-picker-delete-icon {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  font-size: 14px;
+  opacity: 0.85;
+}
+
+.section-picker-delete-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .section-picker-divider {
@@ -1179,14 +1223,11 @@
     font-size: 16px;
   }
   .section-picker-item,
-  .section-picker-action {
+  .section-picker-action,
+  .section-picker-delete-row {
     padding: 12px;
     font-size: 15px;
     min-height: 44px;
-  }
-  .section-picker-delete {
-    min-width: 40px;
-    min-height: 40px;
   }
 
   /* Header: title + user controls share the top row; list dropdown drops below */
