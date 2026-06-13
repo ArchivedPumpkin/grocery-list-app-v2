@@ -120,6 +120,10 @@ function App() {
       return
     }
 
+    // Just signed in — leave the auth screen so the list view (and its
+    // list switcher) renders without needing a refresh.
+    setView(v => (v === 'auth' ? 'list' : v))
+
     let cancelled = false
     ;(async () => {
       const params = new URLSearchParams(window.location.search)
