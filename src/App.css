@@ -528,6 +528,27 @@
   flex-shrink: 0;
 }
 
+.section-dropzone {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 12px;
+  border: 1px dashed var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  opacity: 0.6;
+  font-size: 13px;
+  transition: background 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.section-dropzone.over {
+  background: var(--accent-bg);
+  border-color: var(--accent-border);
+  color: var(--accent);
+  opacity: 1;
+}
+
 .btn-delete-section {
   width: 24px;
   height: 24px;

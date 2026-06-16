@@ -387,6 +387,35 @@ function App() {
     }
   }
 
+  // Like reorderItems, but the moved item also changes section. newItems already
+  // carries the moved item's updated section_id.
+  async function moveItem(newItems, movedId) {
+    const previous = items
+    const repositioned = newItems.map((item, index) => ({ ...item, position: index }))
+    setItems(repositioned)
+    if (isGuest) {
+      reorderGuestItems(currentListId, repositioned)
+      return
+    }
+    const results = await Promise.all(
+      repositioned.map(item =>
+        supabase
+          .from('grocery_items')
+          .update(
+            item.id === movedId
+              ? { position: item.position, section_id: item.section_id }
+              : { position: item.position }
+          )
+          .eq('id', item.id)
+      )
+    )
+    const failure = results.find(r => r.error)
+    if (failure) {
+      console.error('Failed to move item:', failure.error)
+      setItems(previous)
+    }
+  }
+
   async function deleteItem(id) {
     const previous = items
     setItems(prev => prev.filter(item => item.id !== id))
@@ -668,6 +697,7 @@ function App() {
                 onToggle={togglePurchased}
                 onReorder={reorderItems}
                 onReorderSections={reorderSections}
+                onMoveItem={moveItem}
                 onDelete={deleteItem}
                 onDeleteSection={deleteSection}
               />
