@@ -144,6 +144,12 @@ export function deleteGuestItem(listId, id) {
   write(state)
 }
 
+export function clearGuestItems(listId) {
+  const state = read()
+  state.items[listId] = []
+  write(state)
+}
+
 export function reorderGuestItems(listId, items) {
   const state = read()
   state.items[listId] = items.map((it, idx) => ({ ...it, position: idx }))

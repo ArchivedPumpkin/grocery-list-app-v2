@@ -7,6 +7,7 @@ import {
   addGuestItem,
   updateGuestItem,
   deleteGuestItem,
+  clearGuestItems,
   reorderGuestItems,
   readAllGuestItems,
   clearGuestData,
@@ -433,6 +434,25 @@ function App() {
     }
   }
 
+  async function clearItems() {
+    if (!currentListId || items.length === 0) return
+    const previous = items
+    setItems([])
+    if (isGuest) {
+      clearGuestItems(currentListId)
+      return
+    }
+    const { error } = await supabase
+      .from('grocery_items')
+      .delete()
+      .eq('list_id', currentListId)
+    if (error) {
+      console.error('Failed to clear list:', error)
+      setNotice({ type: 'error', text: `Could not clear list: ${error.message}` })
+      setItems(previous)
+    }
+  }
+
   async function createList(name) {
     if (isGuest) {
       const list = createGuestList(name)
@@ -688,6 +708,21 @@ function App() {
               sections={sections}
               onDeleteSection={deleteSection}
             />
+            {!itemsLoading && items.length > 0 && (
+              <div className="list-toolbar">
+                <button
+                  type="button"
+                  className="btn-clear-list"
+                  onClick={() => {
+                    if (window.confirm('Clear the entire list? This removes all items.')) {
+                      clearItems()
+                    }
+                  }}
+                >
+                  Clear list
+                </button>
+              </div>
+            )}
             {itemsLoading ? (
               <p className="empty-state">Loading items…</p>
             ) : (
