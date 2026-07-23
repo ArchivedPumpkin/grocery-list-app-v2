@@ -73,8 +73,7 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
     if (deletableNames.length <= 1) setEditing(false)
   }
 
-  function handleCreate(e) {
-    e.preventDefault()
+  function handleCreate() {
     const name = newName.trim()
     if (!name) return
     const match = optionNames.find(n => n.toLowerCase() === name.toLowerCase())
@@ -165,16 +164,22 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
               <div className="section-picker-divider" />
 
               {creating ? (
-                <form className="section-picker-create" onSubmit={handleCreate}>
+                <div className="section-picker-create">
                   <input
                     type="text"
                     value={newName}
                     onChange={e => setNewName(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault()
+                        handleCreate()
+                      }
+                    }}
                     placeholder="Section name"
                     autoFocus
                   />
-                  <button type="submit" className="btn-add">Add</button>
-                </form>
+                  <button type="button" className="btn-add" onClick={handleCreate}>Add</button>
+                </div>
               ) : (
                 <button
                   type="button"
