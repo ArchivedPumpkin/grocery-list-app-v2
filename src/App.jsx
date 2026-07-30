@@ -25,6 +25,7 @@ import ManageMembers from './components/ManageMembers'
 import Account from './components/Account'
 import UserMenu from './components/UserMenu'
 import MergePrompt from './components/MergePrompt'
+import ConfirmModal from './components/ConfirmModal'
 import './App.css'
 
 const SELECTED_LIST_KEY = 'grocery.selectedListId'
@@ -52,6 +53,7 @@ function App() {
   const [view, setView] = useState('list')
   const [mergePromptOpen, setMergePromptOpen] = useState(false)
   const [merging, setMerging] = useState(false)
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
 
   const isGuest = !session
 
@@ -713,11 +715,7 @@ function App() {
                 <button
                   type="button"
                   className="btn-clear-list"
-                  onClick={() => {
-                    if (window.confirm('Clear the entire list? This removes all items.')) {
-                      clearItems()
-                    }
-                  }}
+                  onClick={() => setClearConfirmOpen(true)}
                 >
                   Clear list
                 </button>
@@ -755,6 +753,16 @@ function App() {
           merging={merging}
           onMerge={handleMergeConfirm}
           onDiscard={handleMergeDiscard}
+        />
+      )}
+
+      {clearConfirmOpen && (
+        <ConfirmModal
+          title="Clear the entire list?"
+          message="This removes all items and cannot be undone."
+          confirmLabel="Clear list"
+          onConfirm={() => { setClearConfirmOpen(false); clearItems() }}
+          onCancel={() => setClearConfirmOpen(false)}
         />
       )}
     </div>
