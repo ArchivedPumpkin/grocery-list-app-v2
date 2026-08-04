@@ -37,3 +37,25 @@ export function removeCustomSectionName(name) {
   const names = loadCustomSectionNames().filter(n => n.toLowerCase() !== lower)
   localStorage.setItem(CUSTOM_KEY, JSON.stringify(names))
 }
+
+// Predefined section names that the user has explicitly hidden.
+const REMOVED_PREDEFINED_KEY = 'grocery.removedPredefinedSections'
+
+export function loadRemovedPredefinedNames() {
+  try {
+    const raw = localStorage.getItem(REMOVED_PREDEFINED_KEY)
+    const parsed = raw ? JSON.parse(raw) : []
+    return Array.isArray(parsed) ? parsed.filter(n => typeof n === 'string') : []
+  } catch {
+    return []
+  }
+}
+
+export function addRemovedPredefinedName(name) {
+  const trimmed = name.trim()
+  if (!trimmed) return
+  const names = loadRemovedPredefinedNames()
+  if (names.some(n => n.toLowerCase() === trimmed.toLowerCase())) return
+  names.push(trimmed)
+  localStorage.setItem(REMOVED_PREDEFINED_KEY, JSON.stringify(names))
+}

@@ -4,6 +4,8 @@ import {
   loadCustomSectionNames,
   addCustomSectionName,
   removeCustomSectionName,
+  loadRemovedPredefinedNames,
+  addRemovedPredefinedName,
 } from '../lib/sections'
 
 function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSection }) {
@@ -12,6 +14,7 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
   const [editing, setEditing] = useState(false)
   const [newName, setNewName] = useState('')
   const [customNames, setCustomNames] = useState(() => loadCustomSectionNames())
+  const [removedPredefined, setRemovedPredefined] = useState(() => loadRemovedPredefinedNames())
   const rootRef = useRef(null)
 
   function closeMenu() {
@@ -29,14 +32,15 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
     return () => document.removeEventListener('mousedown', onDocClick)
   }, [open])
 
-  // Options: predefined variants, remembered custom names, and this list's existing
-  // sections — deduped by name (case-insensitive), predefined first.
+  // Options: predefined variants (excluding removed ones), remembered custom names,
+  // and this list's existing sections — deduped by name (case-insensitive), predefined first.
   const optionNames = useMemo(() => {
+    const removedLower = new Set(removedPredefined.map(n => n.toLowerCase()))
     const seen = new Set()
     const result = []
     const push = name => {
       const key = name.trim().toLowerCase()
-      if (!key || seen.has(key)) return
+      if (!key || seen.has(key) || removedLower.has(key)) return
       seen.add(key)
       result.push(name)
     }
@@ -44,16 +48,10 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
     customNames.forEach(push)
     sections.forEach(s => push(s.name))
     return result
-  }, [customNames, sections])
+  }, [customNames, sections, removedPredefined])
 
-  // Built-in predefined names aren't removable; custom names and real sections are.
-  const deletableNames = useMemo(() => {
-    const lowerSet = new Set([
-      ...sections.map(s => s.name.trim().toLowerCase()),
-      ...customNames.map(n => n.toLowerCase()),
-    ])
-    return optionNames.filter(name => lowerSet.has(name.trim().toLowerCase()))
-  }, [optionNames, sections, customNames])
+  // All shown options are deletable (predefined ones get hidden device-wide when deleted).
+  const deletableNames = optionNames
 
   function handleSelect(name) {
     onChange(name)
@@ -67,6 +65,10 @@ function SectionPicker({ id, sections = [], value = '', onChange, onDeleteSectio
     if (customNames.some(n => n.toLowerCase() === lower)) {
       removeCustomSectionName(name)
       setCustomNames(prev => prev.filter(n => n.toLowerCase() !== lower))
+    }
+    if (PREDEFINED_SECTIONS.some(n => n.toLowerCase() === lower)) {
+      addRemovedPredefinedName(name)
+      setRemovedPredefined(prev => [...prev, name])
     }
     if (value.trim().toLowerCase() === lower) onChange('')
     // Leave edit mode once the last removable section is gone.
