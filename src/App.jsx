@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { FiSun, FiMoon } from 'react-icons/fi'
 import { supabase } from './lib/supabase'
 import {
   ensureGuestLists,
@@ -651,7 +652,11 @@ function App() {
               aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
               title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
             >
-              {theme === 'dark' ? '☀' : '☾'}
+              {theme === 'dark' ? (
+                <FiSun aria-hidden="true" />
+              ) : (
+                <FiMoon aria-hidden="true" />
+              )}
             </button>
             {isGuest ? (
               <button
