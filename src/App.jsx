@@ -38,6 +38,14 @@ function initialTheme() {
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
+// Insert or replace a row by id, keeping the array ordered by position.
+function upsertById(rows, row) {
+  const next = rows.some(r => r.id === row.id)
+    ? rows.map(r => (r.id === row.id ? row : r))
+    : [...rows, row]
+  return next.sort((a, b) => a.position - b.position)
+}
+
 function App() {
   const [session, setSession] = useState(null)
   const [authChecked, setAuthChecked] = useState(false)
@@ -244,6 +252,49 @@ function App() {
     return () => { cancelled = true }
   }, [isGuest, currentListId])
 
+  // Keep items and sections in sync with other people editing the same list.
+  useEffect(() => {
+    if (isGuest || !currentListId) return
+    let cancelled = false
+    const filter = `list_id=eq.${currentListId}`
+    const applyChange = setRows => payload => {
+      if (payload.eventType === 'DELETE') {
+        setRows(prev => prev.filter(r => r.id !== payload.old.id))
+      } else {
+        setRows(prev => upsertById(prev, payload.new))
+      }
+    }
+
+    // Catch up on anything that changed before the subscription was live or
+    // while the connection was down.
+    async function refetch() {
+      const [itemsRes, sectionsRes] = await Promise.all([
+        supabase.from('grocery_items').select('*').eq('list_id', currentListId).order('position', { ascending: true }),
+        supabase.from('sections').select('*').eq('list_id', currentListId).order('position', { ascending: true }),
+      ])
+      if (cancelled) return
+      if (!itemsRes.error) setItems(itemsRes.data ?? [])
+      if (!sectionsRes.error) setSections(sectionsRes.data ?? [])
+    }
+
+    let channel = supabase.channel(`list:${currentListId}`)
+    for (const [table, setRows] of [['grocery_items', setItems], ['sections', setSections]]) {
+      channel = channel
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table, filter }, applyChange(setRows))
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table, filter }, applyChange(setRows))
+        // Delete events can't be filtered by column; ids from other lists just won't match.
+        .on('postgres_changes', { event: 'DELETE', schema: 'public', table }, applyChange(setRows))
+    }
+    channel.subscribe(status => {
+      if (status === 'SUBSCRIBED') refetch()
+    })
+
+    return () => {
+      cancelled = true
+      supabase.removeChannel(channel)
+    }
+  }, [isGuest, currentListId])
+
   // Resolve a section name to an id, reusing a matching section or creating one.
   async function resolveSectionId(name) {
     const trimmed = name.trim()
@@ -281,7 +332,7 @@ function App() {
       console.error('Failed to add item:', error)
       return
     }
-    setItems(prev => [...prev, data])
+    setItems(prev => upsertById(prev, data))
   }
 
   async function createSection(name) {
@@ -304,7 +355,7 @@ function App() {
       setNotice({ type: 'error', text: `Could not create section: ${error.message}` })
       return null
     }
-    setSections(prev => [...prev, data])
+    setSections(prev => upsertById(prev, data))
     return data
   }
 
